@@ -84,6 +84,109 @@ public sealed class AdmissionApiTests(PostgresApiFixture fixture) : IClassFixtur
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
+    [Fact]
+    public async Task DuplicateActiveApplication_ReturnsConflict()
+    {
+        using var client = fixture.Factory.CreateClient();
+        var classId = await CreateClassAsync(client, 2);
+        var studentId = NewStudentId();
+
+        var first = await SendStudentRequestAsync(client, HttpMethod.Post,
+            $"/classes/{classId}/holds", studentId);
+        var second = await SendStudentRequestAsync(client, HttpMethod.Post,
+            $"/classes/{classId}/holds", studentId);
+
+        Assert.Equal(HttpStatusCode.Created, first.StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, second.StatusCode);
+    }
+
+    [Fact]
+    public async Task FullClass_ReturnsConflict()
+    {
+        using var client = fixture.Factory.CreateClient();
+        var classId = await CreateClassAsync(client, 1);
+
+        var first = await SendStudentRequestAsync(client, HttpMethod.Post,
+            $"/classes/{classId}/holds", NewStudentId());
+        var second = await SendStudentRequestAsync(client, HttpMethod.Post,
+            $"/classes/{classId}/holds", NewStudentId());
+
+        Assert.Equal(HttpStatusCode.Created, first.StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, second.StatusCode);
+    }
+
+    [Fact]
+    public async Task CancellingHold_ReleasesSeatForAnotherStudent()
+    {
+        using var client = fixture.Factory.CreateClient();
+        var classId = await CreateClassAsync(client, 1);
+        var firstStudent = NewStudentId();
+
+        var holdResponse = await SendStudentRequestAsync(client, HttpMethod.Post,
+            $"/classes/{classId}/holds", firstStudent);
+        var hold = await holdResponse.Content.ReadFromJsonAsync<HoldCreatedDto>();
+        Assert.NotNull(hold);
+
+        var cancelResponse = await SendStudentRequestAsync(client, HttpMethod.Delete,
+            $"/holds/{hold.HoldId}", firstStudent);
+        var nextHoldResponse = await SendStudentRequestAsync(client, HttpMethod.Post,
+            $"/classes/{classId}/holds", NewStudentId());
+
+        Assert.Equal(HttpStatusCode.NoContent, cancelResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.Created, nextHoldResponse.StatusCode);
+    }
+
+    [Fact]
+    public async Task AnotherStudentCannotConfirmSomeoneElsesHold()
+    {
+        using var client = fixture.Factory.CreateClient();
+        var classId = await CreateClassAsync(client, 1);
+        var owner = NewStudentId();
+        var holdResponse = await SendStudentRequestAsync(client, HttpMethod.Post,
+            $"/classes/{classId}/holds", owner);
+        var hold = await holdResponse.Content.ReadFromJsonAsync<HoldCreatedDto>();
+        Assert.NotNull(hold);
+
+        var response = await SendStudentRequestAsync(client, HttpMethod.Post,
+            $"/holds/{hold.HoldId}/confirm", NewStudentId());
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task ExpiredHold_CannotBeConfirmed()
+    {
+        await using var shortLivedFactory = new AdmissionApiFactory(
+            fixture.Factory.ConnectionString,
+            holdDurationSeconds: 1);
+        using var client = shortLivedFactory.CreateClient();
+        var classId = await CreateClassAsync(client, 1);
+        var studentId = NewStudentId();
+        var holdResponse = await SendStudentRequestAsync(client, HttpMethod.Post,
+            $"/classes/{classId}/holds", studentId);
+        var hold = await holdResponse.Content.ReadFromJsonAsync<HoldCreatedDto>();
+        Assert.NotNull(hold);
+
+        await Task.Delay(TimeSpan.FromSeconds(2));
+        var response = await SendStudentRequestAsync(client, HttpMethod.Post,
+            $"/holds/{hold.HoldId}/confirm", studentId);
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task InvalidClassInput_ReturnsBadRequest()
+    {
+        using var client = fixture.Factory.CreateClient();
+        var response = await client.PostAsJsonAsync("/classes", new
+        {
+            name = "A",
+            totalSeats = 0,
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
     private static async Task<string> CreateClassAsync(HttpClient client, int seats)
     {
         var response = await client.PostAsJsonAsync("/classes", new

@@ -11,8 +11,7 @@ namespace SchoolAdmission.Tests;
 
 public sealed class PostgresApiFixture : IAsyncLifetime
 {
-    private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder()
-        .WithImage("postgres:16-alpine")
+    private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder("postgres:16-alpine")
         .Build();
 
     public AdmissionApiFactory Factory { get; private set; } = null!;
@@ -31,11 +30,17 @@ public sealed class PostgresApiFixture : IAsyncLifetime
     }
 }
 
-public sealed class AdmissionApiFactory(string connectionString) : WebApplicationFactory<Program>
+public sealed class AdmissionApiFactory(
+    string connectionString,
+    int? holdDurationSeconds = null) : WebApplicationFactory<Program>
 {
+    public string ConnectionString => connectionString;
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");
+        if (holdDurationSeconds is not null)
+            builder.UseSetting("HOLD_DURATION_SECONDS", holdDurationSeconds.Value.ToString());
         builder.ConfigureServices(services =>
         {
             services.RemoveAll<DbContextOptions<SchoolAdmissionDbContext>>();
