@@ -1,0 +1,29 @@
+# .NET
+**/bin/
+**/obj/
+.vs/
+*.user
+*.suo
+
+# Node / frontend
+**/node_modules/
+**/dist/
+**/coverage/
+**/.vite/
+
+# Environment / secrets
+.env
+.env.*.local
+!**/.env.example
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Test results
+**/TestResults/
+
+# Local data
+*.db

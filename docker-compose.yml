@@ -1,0 +1,79 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: school-admission-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: school_admission
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - school_admission_data:/var/lib/postgresql/data
+    # Exposed so the backend can also be run locally with `dotnet run` (Mode B).
+    # If you already have PostgreSQL installed on 5432, change to "5433:5432"
+    # and use Port=5433 in your local connection string.
+    ports:
+      - '5432:5432'
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d school_admission']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: school-admission-api
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__DefaultConnection: Host=db;Port=5432;Database=school_admission;Username=postgres;Password=postgres
+      HOLD_DURATION_SECONDS: ${HOLD_DURATION_SECONDS:-600}
+      Cors__AllowedOrigins__0: http://localhost:5173
+    ports:
+      - '8080:8080'
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # Optional bonus: second independent API process sharing the same PostgreSQL DB.
+  # Start with: docker compose --profile multi-instance up --build
+  backend-secondary:
+    profiles: ['multi-instance']
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: school-admission-api-2
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__DefaultConnection: Host=db;Port=5432;Database=school_admission;Username=postgres;Password=postgres
+      HOLD_DURATION_SECONDS: ${HOLD_DURATION_SECONDS:-600}
+      Cors__AllowedOrigins__0: http://localhost:5173
+    ports:
+      - '8081:8080'
+    depends_on:
+      db:
+        condition: service_healthy
+      backend:
+        condition: service_started
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: school-admission-frontend
+    restart: unless-stopped
+    environment:
+      API_BASE_URL: http://localhost:8080
+    ports:
+      - '5173:80'
+    depends_on:
+      backend:
+        condition: service_started
+
+volumes:
+  school_admission_data:
