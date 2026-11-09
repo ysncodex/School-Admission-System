@@ -27,3 +27,4 @@ Thumbs.db
 
 # Local data
 *.db
+backup.sql
