@@ -4,8 +4,6 @@ import { isValidStudentId } from '../lib/student';
 import type { AdmissionClass } from '../types/admission';
 import { buttonClass, Spinner } from './ui';
 
-// ---------- Hero ----------
-
 interface HeroProps {
   classes: AdmissionClass[];
   onBrowse: () => void;
@@ -51,9 +49,7 @@ export function Hero({ classes, onBrowse }: HeroProps) {
             ['Classes', classes.length, 'text-white'],
           ].map(([label, value, color]) => (
             <div key={label as string}>
-              <dd className={`font-display text-2xl font-bold tabular-nums ${color}`}>
-                {value}
-              </dd>
+              <dd className={`font-display text-2xl font-bold tabular-nums ${color}`}>{value}</dd>
               <dt className="mt-0.5 text-xs text-white/70">{label}</dt>
             </div>
           ))}
@@ -63,12 +59,13 @@ export function Hero({ classes, onBrowse }: HeroProps) {
   );
 }
 
-// ---------- Student identification ----------
-
 interface IdentityPanelProps {
   studentId: string;
-  /** Returns true when the number was valid and saved. */
   onSave: (raw: string) => boolean;
+}
+
+function formatMaskedStudentId(studentId: string): string {
+  return `•••• ••••• •••• ${studentId.slice(-4)}`;
 }
 
 export function IdentityPanel({ studentId, onSave }: IdentityPanelProps) {
@@ -91,10 +88,9 @@ export function IdentityPanel({ studentId, onSave }: IdentityPanelProps) {
           <CheckCircle2 size={21} />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold">Registration number saved</p>
-          <p className="truncate font-mono text-xs text-muted">
-            {'•'.repeat(13)}
-            {studentId.slice(-4)}
+          <p className="text-sm font-semibold">Birth registration number saved</p>
+          <p className="truncate font-mono text-xs tracking-wide text-muted">
+            {formatMaskedStudentId(studentId)}
           </p>
         </div>
         <button
@@ -121,10 +117,11 @@ export function IdentityPanel({ studentId, onSave }: IdentityPanelProps) {
             <UserRound size={22} />
           </span>
           <div>
-            <h2 className="font-display text-xl font-bold">Start with your registration number</h2>
+            <h2 className="font-display text-xl font-bold">
+              Enter your 17-digit birth registration number
+            </h2>
             <p className="mt-1 max-w-md text-sm leading-relaxed text-muted">
-              Your 17-digit birth registration number. It stays in this browser and is only sent
-              with your admission requests.
+              Stored locally in your browser and sent only with your admission requests.
             </p>
           </div>
         </div>
@@ -173,8 +170,6 @@ export function IdentityPanel({ studentId, onSave }: IdentityPanelProps) {
   );
 }
 
-// ---------- Class card ----------
-
 interface ClassCardProps {
   item: AdmissionClass;
   studentReady: boolean;
@@ -205,7 +200,6 @@ export function ClassCard({ item, studentReady, pending, onApply }: ClassCardPro
       </div>
 
       <h3 className="mt-4 break-words font-display text-lg font-bold leading-tight">{item.name}</h3>
-
       <p className="mt-3 flex items-baseline gap-2">
         <span
           className={`font-display text-2xl font-bold leading-none tabular-nums ${

@@ -84,7 +84,7 @@ describe('App smoke test', () => {
     const user = userEvent.setup();
     await user.type(screen.getByLabelText('Birth registration number'), ID);
     await user.click(screen.getByRole('button', { name: 'Save' }));
-    expect(await screen.findByText('Registration number saved')).toBeInTheDocument();
+    expect(await screen.findByText('Birth registration number saved')).toBeInTheDocument();
 
     await user.click(screen.getAllByRole('button', { name: /My applications/ })[0]);
     expect(await screen.findByText('Pay admission fee')).toBeInTheDocument();

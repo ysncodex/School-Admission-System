@@ -25,7 +25,6 @@ type View = 'admissions' | 'applications' | 'admin';
 type Notice = { kind: 'success' | 'error' | 'info'; message: string } | null;
 
 const STORAGE_KEY = 'school-admission-student-id';
-
 const navigation: { id: View; label: string; icon: typeof LayoutDashboard }[] = [
   { id: 'admissions', label: 'Classes', icon: LayoutDashboard },
   { id: 'applications', label: 'My applications', icon: GraduationCap },
@@ -70,13 +69,13 @@ export default function App() {
   const [view, setView] = useState<View>('admissions');
   const [studentId, setStudentId] = useState(() => window.localStorage.getItem(STORAGE_KEY) ?? '');
   const [notice, setNotice] = useState<Notice>(null);
-
   const studentReady = isValidStudentId(studentId);
   const classesQuery = useQuery({
     queryKey: ['classes'],
     queryFn: admissionApi.getClasses,
     refetchInterval: 4_000,
   });
+
   const applicationsQuery = useQuery({
     queryKey: ['applications', studentId],
     queryFn: () => admissionApi.getMyApplications(studentId),
@@ -147,11 +146,17 @@ export default function App() {
     mutationFn: (payload: { name: string; totalSeats: number }) =>
       admissionApi.createClass(payload),
     onSuccess: async (created) => {
-      showNotice({ kind: 'success', message: `${created.name} published.` });
+      showNotice({ kind: 'success', message: `Class "${created.name}" was published successfully.` });
       await queryClient.invalidateQueries({ queryKey: ['classes'] });
     },
     onError: (error) =>
-      showNotice({ kind: 'error', message: errorMessage(error, 'Could not create the class.') }),
+      showNotice({
+        kind: 'error',
+        message: errorMessage(
+          error,
+          'Could not publish the class. Please try again.'
+        ),
+      }),
   });
 
   const confirmHold = useCallback(
@@ -197,7 +202,7 @@ export default function App() {
       setView('admissions');
       return true;
     } catch {
-      return false; // onError already showed the message
+      return false;
     }
   };
 
@@ -445,12 +450,15 @@ export default function App() {
               }`}
             />
             Live seat status:{' '}
-            {classesQuery.isError ? 'Disconnected' : classesQuery.isFetching ? 'Syncing' : 'Connected'}
+            {classesQuery.isError
+              ? 'Disconnected'
+              : classesQuery.isFetching
+                ? 'Syncing'
+                : 'Connected'}
           </span>
         </footer>
       </main>
 
-      {/* Mobile bottom tabs */}
       <nav
         aria-label="Main navigation"
         className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-3 border-t border-line bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
