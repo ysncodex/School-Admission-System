@@ -17,8 +17,11 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
-    ?? ["http://localhost:5173"];
+var configuredFrontendOrigin = builder.Configuration["FRONTEND_ORIGIN"];
+var allowedOrigins = !string.IsNullOrWhiteSpace(configuredFrontendOrigin)
+    ? [configuredFrontendOrigin]
+    : builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
+        ?? ["http://localhost:5173"];
 builder.Services.AddCors(options => options.AddDefaultPolicy(policy =>
     policy.WithOrigins(allowedOrigins)
         .AllowAnyHeader()
