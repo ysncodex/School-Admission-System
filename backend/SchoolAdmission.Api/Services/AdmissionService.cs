@@ -98,7 +98,8 @@ public sealed class AdmissionService(
             x.ClassId == classId && x.StudentId == studentId &&
             (x.Status == ApplicationStatus.CONFIRMED || x.Status == ApplicationStatus.HELD), ct);
         if (existing)
-            throw ApiException.Conflict("You already have an active application or confirmed admission for this class.");
+            throw ApiException.Conflict(
+                "You already have a reservation or confirmed admission for this class. Open My applications to review it.");
 
         var usedSeats = await db.Applications.CountAsync(x => x.ClassId == classId &&
             (x.Status == ApplicationStatus.CONFIRMED || x.Status == ApplicationStatus.HELD), ct);
@@ -123,7 +124,8 @@ public sealed class AdmissionService(
         catch (DbUpdateException exception) when (exception.InnerException is PostgresException
         { SqlState: PostgresErrorCodes.UniqueViolation })
         {
-            throw ApiException.Conflict("You already have an active application or confirmed admission for this class.");
+            throw ApiException.Conflict(
+                "You already have a reservation or confirmed admission for this class. Open My applications to review it.");
         }
 
         return new HoldResponse(hold.Id, hold.ClassId, hold.StudentId,

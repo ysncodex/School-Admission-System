@@ -119,6 +119,9 @@ public sealed class AdmissionApiTests(PostgresApiFixture fixture) : IClassFixtur
 
         Assert.Equal(HttpStatusCode.Created, first.StatusCode);
         Assert.Equal(HttpStatusCode.Conflict, second.StatusCode);
+        var problem = await second.Content.ReadFromJsonAsync<ProblemDetailsDto>();
+        Assert.NotNull(problem);
+        Assert.Contains("Open My applications to review it", problem.Detail);
     }
 
     [Fact]
@@ -234,4 +237,5 @@ public sealed class AdmissionApiTests(PostgresApiFixture fixture) : IClassFixtur
     private sealed record ClassCreatedDto(string Id, string Name, int TotalSeats);
     private sealed record HoldCreatedDto(string HoldId, string ClassId, string StudentId, string Status, DateTimeOffset ExpiresAt);
     private sealed record ClassAvailabilityDto(string Id, string Name, int TotalSeats, int HeldSeats, int ConfirmedSeats, int AvailableSeats);
+    private sealed record ProblemDetailsDto(string? Type, string? Title, int? Status, string? Detail);
 }

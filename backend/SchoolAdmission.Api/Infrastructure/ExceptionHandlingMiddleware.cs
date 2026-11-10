@@ -33,7 +33,7 @@ public sealed class ExceptionHandlingMiddleware(
             {
                 var detail = postgres.ConstraintName == "UX_Classes_Name"
                     ? "A class or shift with this name already exists."
-                    : "This student already has an active application or confirmed admission for this class.";
+                    : "You already have a reservation or confirmed admission for this class. Open My applications to review it.";
                 await WriteErrorAsync(context, StatusCodes.Status409Conflict, detail);
                 return;
             }
