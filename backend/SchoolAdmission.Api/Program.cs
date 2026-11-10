@@ -39,8 +39,6 @@ app.MapGet("/health", () => Results.Ok(new { status = "healthy", timestamp = Dat
 app.UseSwagger();
 app.UseSwaggerUI();
 
-// Apply versioned EF Core migrations automatically so a fresh PostgreSQL volume is ready
-// when the required `docker compose up` workflow starts.
 await using (var scope = app.Services.CreateAsyncScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<SchoolAdmissionDbContext>();

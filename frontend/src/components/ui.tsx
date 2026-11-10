@@ -112,8 +112,6 @@ export function Spinner({ size = 18 }: { size?: number }) {
   );
 }
 
-// ---------- Seat grid ----------
-
 interface Props {
   confirmed: number;
   held: number;
@@ -129,7 +127,6 @@ const palette = {
   dark: { confirmed: 'bg-forest-mint', held: 'bg-amber-bright', open: 'bg-white/10' },
 };
 
-/** Each cell is a seat. Filled left to right: confirmed, then on hold, then open. */
 export function SeatField({
   confirmed,
   held,

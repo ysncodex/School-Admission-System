@@ -6,6 +6,5 @@ public sealed class AdmissionClass
     public string Name { get; set; } = string.Empty;
     public int TotalSeats { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
-
     public ICollection<AdmissionApplication> Applications { get; set; } = new List<AdmissionApplication>();
 }

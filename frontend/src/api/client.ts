@@ -38,9 +38,7 @@ async function request<T>(path: string, options: RequestInit = {}, studentId?: s
     try {
       const problem = (await response.json()) as ApiProblem;
       message = problem.detail || problem.title || message;
-    } catch {
-      // Keep the readable fallback when the server did not return JSON.
-    }
+    } catch {}
     throw new ApiError(message, response.status);
   }
 

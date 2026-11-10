@@ -12,7 +12,6 @@
   body {
     @apply min-w-[320px] bg-paper font-sans text-base text-ink;
   }
-  /* 16px+ inputs stop iOS Safari from zooming on focus */
   input {
     font-size: 16px;
   }

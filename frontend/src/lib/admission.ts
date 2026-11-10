@@ -1,12 +1,9 @@
 import { getRemainingSeconds } from './time';
 import type { ApplicationStatus, StudentApplication } from '../types/admission';
 
-// ---------- Applications: status, grouping, expiry ----------
-
 export type GroupKey = 'action' | 'confirmed' | 'closed';
 export type ApplicationGroups = Record<GroupKey, StudentApplication[]>;
 
-/** A HELD application whose timer has run out is EXPIRED, even before the server says so. */
 export function getEffectiveStatus(app: StudentApplication, now: number): ApplicationStatus {
   return app.status === 'HELD' && getRemainingSeconds(app.expiresAt, now) <= 0
     ? 'EXPIRED'
@@ -20,11 +17,6 @@ export function isPayable(app: StudentApplication, now: number): boolean {
 const byExpiry = (a: StudentApplication, b: StudentApplication) =>
   new Date(a.expiresAt).getTime() - new Date(b.expiresAt).getTime();
 
-/**
- * Groups applications by what the student needs to do next.
- * - action: payable holds, soonest expiry first (most urgent on top)
- * - confirmed / closed: most recent first
- */
 export function groupApplications(apps: StudentApplication[], now: number): ApplicationGroups {
   const groups: ApplicationGroups = { action: [], confirmed: [], closed: [] };
   for (const app of apps) {
@@ -39,7 +31,6 @@ export function groupApplications(apps: StudentApplication[], now: number): Appl
   return groups;
 }
 
-/** Ids of holds that just ran out locally and have not been reported yet. */
 export function findNewlyExpired(
   apps: StudentApplication[],
   now: number,
@@ -55,19 +46,12 @@ export function findNewlyExpired(
     .map((app) => app.holdId);
 }
 
-// ---------- Seats: map real counts onto a visual seat grid ----------
-
 export interface SeatCells {
   confirmed: number;
   held: number;
   open: number;
 }
 
-/**
- * Turns real seat counts into a fixed number of visual cells.
- * - Any non-zero count always gets at least one cell, so small numbers stay visible.
- * - While real seats remain, at least one cell stays open, so a nearly full class never looks full.
- */
 export function allocateCells(
   confirmed: number,
   held: number,

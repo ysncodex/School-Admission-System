@@ -7,7 +7,6 @@ interface AdminViewProps {
   classes: AdmissionClass[];
   pending: boolean;
   liveStatus: 'connected' | 'syncing' | 'disconnected';
-  /** Resolves true when the class was created. */
   onCreate: (name: string, totalSeats: string) => Promise<boolean>;
 }
 
@@ -34,7 +33,6 @@ export function AdminView({ classes, pending, onCreate, liveStatus }: AdminViewP
   const [seats, setSeats] = useState('120');
   const [sortKey, setSortKey] = useState<SortKey>('name');
   const [sortAscending, setSortAscending] = useState(true);
-
   const sortedClasses = useMemo(
     () =>
       [...classes].sort((a, b) => {
@@ -205,7 +203,6 @@ export function AdminView({ classes, pending, onCreate, liveStatus }: AdminViewP
           <p className="py-4 text-base text-muted">No classes published yet.</p>
         ) : (
           <>
-            {/* Mobile: stacked rows */}
             <ul className="divide-y divide-line md:hidden">
               {sortedClasses.map((c) => (
                 <li key={c.id} className="grid gap-3 py-5 first:pt-0 last:pb-0">
@@ -227,7 +224,6 @@ export function AdminView({ classes, pending, onCreate, liveStatus }: AdminViewP
               ))}
             </ul>
 
-            {/* Desktop: table */}
             <div className="hidden overflow-x-auto md:block">
               <table className="w-full text-left text-base">
                 <thead>

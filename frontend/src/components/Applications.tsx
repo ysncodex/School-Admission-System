@@ -21,10 +21,6 @@ import { formatRemainingTime, getRemainingSeconds } from '../lib/time';
 import type { StudentApplication } from '../types/admission';
 import { buttonClass, EmptyState, LoadingState, SectionHeading, Spinner, StatusPill } from './ui';
 
-/**
- * Current time in ms, refreshed every second. Used once per screen and passed down,
- * so every countdown shares a single timer.
- */
 function useNow(intervalMs = 1_000): number {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -34,8 +30,6 @@ function useNow(intervalMs = 1_000): number {
   }, [intervalMs]);
   return now;
 }
-
-// ---------- Application card ----------
 
 interface ApplicationCardProps {
   application: StudentApplication;
@@ -59,9 +53,7 @@ function CopyId({ value }: { value: string }) {
     try {
       await navigator.clipboard.writeText(value);
       setCopied(true);
-    } catch {
-      // Clipboard can be blocked (insecure origin, permissions). The ID stays selectable.
-    }
+    } catch {}
   };
 
   return (
@@ -91,7 +83,6 @@ function ApplicationCardBase({
   const urgent = remaining < 60;
   const busy = confirming || cancelling;
 
-  // Leave the confirmation step if the hold stops being payable.
   useEffect(() => {
     if (!payable) setAskRelease(false);
   }, [payable]);
@@ -201,8 +192,6 @@ function ApplicationCardBase({
 
 export const ApplicationCard = memo(ApplicationCardBase);
 
-// ---------- Applications screen ----------
-
 type Filter = 'all' | GroupKey;
 
 const sections: { key: GroupKey; title: string; hint: string }[] = [
@@ -231,7 +220,6 @@ interface ApplicationsViewProps {
   cancellingId?: string;
   onConfirm: (holdId: string) => void;
   onCancel: (holdId: string) => void;
-  /** Called once when a hold runs out locally, so the list can be re-fetched. */
   onHoldExpired: () => void;
   onRetry: () => void;
   onBrowse: () => void;
