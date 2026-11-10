@@ -25,7 +25,11 @@ public sealed class SchoolAdmissionDbContextModelSnapshot : ModelSnapshot
             entity.Property(x => x.Name).IsRequired().HasMaxLength(100).HasColumnType("character varying(100)");
             entity.Property(x => x.TotalSeats).HasColumnType("integer");
             entity.Property(x => x.CreatedAt).HasColumnType("timestamp with time zone");
-            entity.HasIndex(x => x.Name)
+            entity.Property<string>("NormalizedName")
+                .HasMaxLength(100)
+                .HasColumnType("character varying(100)")
+                .HasComputedColumnSql("LOWER(\"Name\")", stored: true);
+            entity.HasIndex("NormalizedName")
                 .IsUnique()
                 .HasDatabaseName("UX_Classes_Name");
         });

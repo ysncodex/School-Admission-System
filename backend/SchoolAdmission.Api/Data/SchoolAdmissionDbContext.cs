@@ -18,7 +18,10 @@ public sealed class SchoolAdmissionDbContext(DbContextOptions<SchoolAdmissionDbC
         classes.Property(x => x.Name).HasMaxLength(100).IsRequired();
         classes.Property(x => x.TotalSeats).IsRequired();
         classes.Property(x => x.CreatedAt).IsRequired();
-        classes.HasIndex(x => x.Name)
+        classes.Property<string>("NormalizedName")
+            .HasMaxLength(100)
+            .HasComputedColumnSql("LOWER(\"Name\")", stored: true);
+        classes.HasIndex("NormalizedName")
             .IsUnique()
             .HasDatabaseName("UX_Classes_Name");
 
