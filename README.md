@@ -1,11 +1,12 @@
 # School Admission System
 
-A first-come, first-served school admission portal built for the **Assistant Software Engineer take-home assignment**. School staff can publish class/shift groups, while guardians can temporarily reserve a seat and simulate admission-fee payment to confirm the application.
+A first-come, first-served school admission portal. School staff can publish class/shift groups, while guardians can temporarily reserve a seat and simulate admission-fee payment to confirm the application.
 
 ## Features
 
 - Create class/shift groups with a defined seat capacity.
-- View class capacity and held, confirmed, and available seat counts.
+- Prevent duplicate class/shift names, ignoring surrounding whitespace and letter case.
+- View class capacity and held, confirmed and available seat counts.
 - Identify students through the `X-Student-Id` request header.
 - Reserve seats temporarily on a first-come, first-served basis.
 - Expire unpaid holds automatically and release their seats.
@@ -103,7 +104,7 @@ The student number is stored in the browser's local storage so the student can v
 
 ### School admin
 
-Open **School admin**, enter a class/shift name and seat capacity, and publish the class. Each class/shift is a separate admission group with its own capacity; for example, `Class 6 - Morning Shift` and `Class 6 - Day Shift` are separate records.
+Open **School admin**, enter a class/shift name and seat capacity, and publish the class. Each class/shift is a separate admission group with its own capacity; for example, `Class 6 - Morning Shift` and `Class 6 - Day Shift` are separate records. A duplicate name returns `409 Conflict` with a clear message; comparison ignores surrounding whitespace and letter case.
 
 The assignment states that login is not required and does not define an administrator authentication contract. Accordingly, the take-home implementation leaves the admin screen and class-creation endpoint without admin authentication. This is an assignment-scope decision, **not a production security model**. A real deployment should protect administrative operations with authentication and role-based authorization.
 
@@ -188,7 +189,7 @@ Errors use `application/problem+json` with a readable `detail` field. Expected r
 
 - `400 Bad Request` — invalid input, including an invalid student ID.
 - `404 Not Found` — unknown class or application.
-- `409 Conflict` — business conflicts such as no seats remaining, an expired hold, or a duplicate active application.
+- `409 Conflict` — business conflicts such as no seats remaining, an expired hold, a duplicate active application, or a class/shift name that already exists.
 
 ## Seat allocation and concurrency
 
@@ -209,7 +210,7 @@ cd backend
 dotnet test SchoolAdmission.Tests/SchoolAdmission.Tests.csproj
 ```
 
-The backend suite contains 10 integration tests covering class creation, invalid input, student ID validation, duplicate applications, full classes, cancellation, ownership protection, expiration, repeat-confirm idempotency, and concurrency. The concurrency test sends 60 simultaneous reservations to a class with 6 seats; exactly 6 should succeed and the remaining requests should receive HTTP `409 Conflict`.
+The backend suite contains 11 integration tests covering class creation, duplicate class names, invalid input, student ID validation, duplicate applications, full classes, cancellation, ownership protection, expiration, repeat-confirm idempotency, and concurrency. The concurrency test sends 60 simultaneous reservations to a class with 6 seats; exactly 6 should succeed and the remaining requests should receive HTTP `409 Conflict`.
 
 ### Frontend
 
