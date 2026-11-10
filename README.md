@@ -19,7 +19,7 @@ A first-come, first-served school admission portal built for the **Assistant Sof
 
 | Area | Technologies |
 |---|---|
-| Backend | C#, ASP.NET Core Web API (.NET 8+), Entity Framework Core |
+| Backend | C#, ASP.NET Core Web API (.NET 10.0), Entity Framework Core |
 | Database | PostgreSQL 16 |
 | Frontend | React 18, TypeScript, Vite, TanStack Query |
 | Runtime | Docker Compose, Nginx |
@@ -55,7 +55,7 @@ Open the application and service endpoints:
 | Swagger UI | <http://localhost:8080/swagger> |
 | Health check | <http://localhost:8080/health> |
 
-The frontend's API base URL is supplied at container startup through `API_BASE_URL`. The default value is `http://localhost:8080`; it can be changed in the Compose environment without rebuilding the frontend image.
+The frontend's API base URL is supplied at container startup through `API_BASE_URL`. The default value is `http://localhost:8080`; it can be changed in the Compose environment without rebuilding the frontend image. The backend CORS origin is configured independently through `FRONTEND_ORIGIN`, which defaults to `http://localhost:5173`.
 
 ### Configuration
 
@@ -202,7 +202,7 @@ A hosted worker checks for expired holds every second. The API also expires stal
 
 ### Backend
 
-Prerequisites: .NET 8+ SDK and Docker running. Testcontainers starts a disposable PostgreSQL container for the integration tests.
+Prerequisites: .NET 10 SDK and Docker running. Testcontainers starts a disposable PostgreSQL container for the integration tests.
 
 ```bash
 cd backend
@@ -246,7 +246,7 @@ The Docker workflow above is the expected assignment/demo workflow. For local de
 
 ### Prerequisites
 
-- .NET 8+ SDK
+- .NET 10 SDK
 - Node.js 20+ and npm
 - PostgreSQL 16 or compatible, unless using the Docker database
 
@@ -274,7 +274,7 @@ npm install
 npm run dev
 ```
 
-The local frontend defaults to the API at `http://localhost:8080`. To use a different API URL, create `frontend/.env` from `frontend/.env.example` and set `VITE_API_BASE_URL`. Open <http://localhost:5173>.
+The local frontend defaults to the API at `http://localhost:8080`. To use a different API URL, create `frontend/.env` from `frontend/.env.example` and set `VITE_API_BASE_URL`. Open <http://localhost:5173>. If the frontend runs on another origin, set `FRONTEND_ORIGIN` to that exact origin before starting the API.
 
 ### Option B: use the Docker PostgreSQL service with local app processes
 
@@ -292,9 +292,96 @@ Wait until the database reports `healthy`. Set a connection string using the Pos
 $env:ConnectionStrings__DefaultConnection = "Host=localhost;Port=5432;Database=school_admission;Username=postgres;Password=<compose-postgres-password>"
 ```
 
-Start the backend and frontend using the commands in Option A. Do not run the Docker backend and local backend at the same time; both use port `8080`.
+Start the backend and frontend using the commands in Option A. Do not run the Docker backend and local backend at the same time; both use port `8080`. For a non-default local frontend origin, set `$env:FRONTEND_ORIGIN` before `dotnet run`.
+
+For a frontend hosted at another origin, configure the Compose API and frontend together:
+
+```powershell
+$env:FRONTEND_ORIGIN = "http://localhost:5174"
+$env:API_BASE_URL = "http://localhost:8080"
+docker compose up -d --build
+```
+
+`FRONTEND_ORIGIN` is used by both API containers for CORS, while `API_BASE_URL` tells the frontend where to call the API. Keep the origin as scheme, host, and port only; do not add a path.
 
 If another PostgreSQL installation already uses port `5432`, change the database port mapping in `docker-compose.yml` from `5432:5432` to `5433:5432`, restart the database, and use `Port=5433` in the local connection string.
+
+### Troubleshooting local backend authentication
+
+If `docker compose up --build` works but `dotnet run` reports `28P01: password authentication failed`, the local backend may be using a stale PowerShell connection-string override or a different PostgreSQL process on port `5432`.
+
+Use this repeatable workflow from the repository root:
+
+1. Stop only the Docker API and frontend so their ports are free:
+
+   ```powershell
+   cd C:\Users\yeasin\Downloads\school-admission-system
+   docker compose stop backend frontend
+   ```
+
+2. Start the Docker PostgreSQL service and confirm its status:
+
+   ```powershell
+   docker compose up -d db
+   docker compose ps db
+   ```
+
+   Continue when the database shows `healthy`.
+
+3. Check whether this PowerShell session has an old connection-string override. Do not print the password:
+
+   ```powershell
+   if ($env:ConnectionStrings__DefaultConnection) {
+       Write-Host "Connection string override is set in this terminal."
+   } else {
+       Write-Host "No connection string override is set."
+   }
+   ```
+
+4. Clear the old override, then set the connection string explicitly. Use the same password configured for `POSTGRES_PASSWORD` in `docker-compose.yml`; never commit the real password:
+
+   ```powershell
+   Remove-Item Env:ConnectionStrings__DefaultConnection -ErrorAction SilentlyContinue
+   $env:ConnectionStrings__DefaultConnection = "Host=localhost;Port=5432;Database=school_admission;Username=postgres;Password=<compose-password>"
+   ```
+
+5. Start the local backend in the same terminal:
+
+   ```powershell
+   cd backend\SchoolAdmission.Api
+   dotnet run
+   ```
+
+6. Verify the API from another terminal:
+
+   ```powershell
+   Invoke-RestMethod http://localhost:8080/health
+   ```
+
+   A successful response contains `"status": "healthy"`.
+
+Docker and local backend connection settings are intentionally different:
+
+| Backend process | Database host | Reason |
+|---|---|---|
+| Docker Compose backend | `db` | Docker service-to-service networking |
+| Local `dotnet run` backend | `localhost` | Published PostgreSQL port on the host |
+
+If port `5432` is already occupied, identify the process:
+
+```powershell
+Get-NetTCPConnection -LocalPort 5432 -State Listen
+```
+
+Change the Compose mapping from `5432:5432` to `5433:5432`, recreate the database, and use `Port=5433` locally:
+
+```powershell
+docker compose down
+docker compose up -d db
+$env:ConnectionStrings__DefaultConnection = "Host=localhost;Port=5433;Database=school_admission;Username=postgres;Password=<compose-password>"
+```
+
+Do not run the Docker backend and local backend simultaneously because both use port `8080`. Likewise, use only one frontend process on port `5173`.
 
 ## Repository structure
 
