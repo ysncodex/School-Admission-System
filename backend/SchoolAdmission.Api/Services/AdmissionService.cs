@@ -31,6 +31,8 @@ public sealed class AdmissionService(
             throw ApiException.BadRequest("Class name must contain at least 3 characters.");
         if (request.TotalSeats < 1 || request.TotalSeats > 100_000)
             throw ApiException.BadRequest("Total seats must be between 1 and 100,000.");
+        if (await db.Classes.AnyAsync(x => x.Name.ToLower() == normalizedName.ToLower(), ct))
+            throw ApiException.Conflict($"A class or shift named \"{normalizedName}\" already exists.");
 
         var entity = new AdmissionClass
         {
@@ -85,9 +87,6 @@ public sealed class AdmissionService(
     public async Task<HoldResponse> CreateHoldAsync(string classId, string studentId, CancellationToken ct)
     {
         await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted, ct);
-
-        // Locking the class row serializes all allocations for this class across every API
-        // process connected to this PostgreSQL database. An in-memory lock is not sufficient.
         var admissionClass = await LockClassRowAsync(classId, ct);
         if (admissionClass is null)
             throw ApiException.NotFound("Class was not found.");
@@ -122,7 +121,7 @@ public sealed class AdmissionService(
             await transaction.CommitAsync(ct);
         }
         catch (DbUpdateException exception) when (exception.InnerException is PostgresException
-               { SqlState: PostgresErrorCodes.UniqueViolation })
+        { SqlState: PostgresErrorCodes.UniqueViolation })
         {
             throw ApiException.Conflict("You already have an active application or confirmed admission for this class.");
         }
@@ -207,7 +206,6 @@ public sealed class AdmissionService(
             hold.Status = ApplicationStatus.CANCELLED;
         else if (hold.Status == ApplicationStatus.CONFIRMED)
             throw ApiException.Conflict("A confirmed admission cannot be cancelled through this endpoint.");
-        // DELETE is idempotent for already EXPIRED or CANCELLED applications.
 
         await db.SaveChangesAsync(ct);
         await transaction.CommitAsync(ct);

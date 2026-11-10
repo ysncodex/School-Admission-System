@@ -31,8 +31,10 @@ public sealed class ExceptionHandlingMiddleware(
             if (exception is DbUpdateException { InnerException: PostgresException postgres } &&
                 postgres.SqlState == PostgresErrorCodes.UniqueViolation)
             {
-                await WriteErrorAsync(context, StatusCodes.Status409Conflict,
-                    "This student already has an active application or confirmed admission for this class.");
+                var detail = postgres.ConstraintName == "UX_Classes_Name"
+                    ? "A class or shift with this name already exists."
+                    : "This student already has an active application or confirmed admission for this class.";
+                await WriteErrorAsync(context, StatusCodes.Status409Conflict, detail);
                 return;
             }
 

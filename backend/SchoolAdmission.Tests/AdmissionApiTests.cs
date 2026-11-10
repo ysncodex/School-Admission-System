@@ -24,6 +24,27 @@ public sealed class AdmissionApiTests(PostgresApiFixture fixture) : IClassFixtur
     }
 
     [Fact]
+    public async Task DuplicateClassName_ReturnsConflict()
+    {
+        using var client = fixture.Factory.CreateClient();
+        const string className = "Class 8 - Morning Shift";
+
+        var first = await client.PostAsJsonAsync("/classes", new
+        {
+            name = className,
+            totalSeats = 12
+        });
+        var duplicate = await client.PostAsJsonAsync("/classes", new
+        {
+            name = "  class 8 - morning shift  ",
+            totalSeats = 20
+        });
+
+        Assert.Equal(HttpStatusCode.Created, first.StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, duplicate.StatusCode);
+    }
+
+    [Fact]
     public async Task Hold_CanBeConfirmedRepeatedlyWithoutDoubleCounting()
     {
         using var client = fixture.Factory.CreateClient();

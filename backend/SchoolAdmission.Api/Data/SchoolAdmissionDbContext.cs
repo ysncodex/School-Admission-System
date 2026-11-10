@@ -18,7 +18,9 @@ public sealed class SchoolAdmissionDbContext(DbContextOptions<SchoolAdmissionDbC
         classes.Property(x => x.Name).HasMaxLength(100).IsRequired();
         classes.Property(x => x.TotalSeats).IsRequired();
         classes.Property(x => x.CreatedAt).IsRequired();
-        classes.HasIndex(x => x.Name);
+        classes.HasIndex(x => x.Name)
+            .IsUnique()
+            .HasDatabaseName("UX_Classes_Name");
 
         var applications = modelBuilder.Entity<AdmissionApplication>();
         applications.ToTable("Applications");
@@ -35,10 +37,6 @@ public sealed class SchoolAdmissionDbContext(DbContextOptions<SchoolAdmissionDbC
             .OnDelete(DeleteBehavior.Restrict);
         applications.HasIndex(x => new { x.ClassId, x.Status, x.ExpiresAt });
         applications.HasIndex(x => new { x.StudentId, x.CreatedAt });
-
-        // This index is a second line of defence. The class-row lock in AdmissionService
-        // serializes allocation across API processes; this index prevents duplicate active
-        // applications even if a future code path forgets to take that lock.
         applications.HasIndex(x => new { x.ClassId, x.StudentId })
             .IsUnique()
             .HasDatabaseName("UX_Applications_OneActivePerStudentClass")
